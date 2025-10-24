@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var (
@@ -17,6 +18,85 @@ type Date struct {
 	month   int
 	year    int
 	current bool
+}
+
+func New(month, year int) (Date, error) {
+	if month < 1 || month > 12 {
+		return Date{}, fmt.Errorf("invalid month: %d", month)
+	}
+
+	if inFuture(month, year) {
+		return Date{}, ErrFutureDate
+	}
+
+	return Date{
+		month: month,
+		year:  year,
+	}, nil
+}
+
+func Current() Date {
+	return Date{
+		current: true,
+	}
+}
+
+func (d *Date) Equal(other Date) bool {
+	if d.current && other.current {
+		return true
+	}
+
+	if d.current || other.current {
+		return false
+	}
+
+	return d.month == other.month && d.year == other.year
+}
+
+func (d *Date) Less(other Date) bool {
+	if d.current && other.current {
+		return false
+	}
+
+	if d.current {
+		return false
+	}
+
+	if other.current {
+		return true
+	}
+
+	if d.year != other.year {
+		return d.year < other.year
+	}
+
+	return d.month < other.month
+}
+
+func (d *Date) Since(other Date) int {
+	if d.current && other.current {
+		return 0
+	}
+
+	if d.Less(other) {
+		return -other.Since(*d)
+	}
+
+	y, m := d.year, d.month
+	if d.current {
+		now := time.Now()
+		y = now.Year()
+		m = int(now.Month())
+	}
+
+	years := y - other.year
+	months := m - other.month
+
+	return years*12 + months
+}
+
+func (d *Date) Current() bool {
+	return d.current
 }
 
 func (d *Date) String() string {
@@ -99,8 +179,17 @@ func ExtractAndParseDate(str string) (Date, error) {
 		return Date{}, fmt.Errorf("invalid year in date: %s", str)
 	}
 
+	if inFuture(month, year) {
+		return Date{}, ErrFutureDate
+	}
+
 	return Date{
 		month: month,
 		year:  year,
 	}, nil
+}
+
+func inFuture(month, year int) bool {
+	now := time.Now()
+	return year > now.Year() || (year == now.Year() && month > int(now.Month()))
 }

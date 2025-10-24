@@ -58,4 +58,9 @@ func main() {
 		slog.Error("failed to write resume to file", slog.Any("error", err))
 		os.Exit(1)
 	}
+
+	errs := r.Validate()
+	for field, errMsg := range errs {
+		fmt.Printf("%s: %s\n", field, errMsg)
+	}
 }

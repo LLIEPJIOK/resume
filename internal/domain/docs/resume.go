@@ -1,7 +1,9 @@
 package docs
 
 import (
+	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/LLIEPJIOK/resume/internal/domain/mydate"
 )
@@ -102,4 +104,157 @@ func (r *Resume) SetVersionControls(versionControls []string) *Resume {
 func (r *Resume) AddWorkHistory(wh WorkHistory) *Resume {
 	r.WorkHistory = append(r.WorkHistory, wh)
 	return r
+}
+
+const (
+	firstName      = "first_name"
+	lastName       = "last_name"
+	position       = "position"
+	skills         = "skills"
+	projects       = "projects"
+	education      = "education"
+	languageSkills = "language_skills"
+
+	experience     = "experience.years"
+	experienceTech = "experience.technologies"
+	experienceDB   = "experience.databases"
+	experienceDev  = "experience.dev_ops"
+	experienceColl = "experience.collaboration_tools"
+	experienceVC   = "experience.version_control"
+
+	workHistory       = "work_history"
+	workHistoryPeriod = "work_history.period"
+	workHistoryRole   = "work_history.role"
+	workHistoryProj   = "work_history.project"
+	workHistoryResp   = "work_history.responsibilities"
+	workHistoryTech   = "work_history.technologies"
+)
+
+func (r *Resume) Validate() (errs map[string]string) {
+	errs = make(map[string]string)
+	errs = r.validateTopFields(errs)
+	errs = r.validateExperience(errs)
+	errs = r.validateWorkHistory(errs)
+
+	return errs
+}
+
+func (r *Resume) validateTopFields(errs map[string]string) map[string]string {
+	if r.FirstName == "" {
+		errs[firstName] = "first name is empty"
+	}
+
+	if r.LastName == "" {
+		errs[lastName] = "last name is empty"
+	}
+
+	if utf8.RuneCountInString(r.LastName) != 2 || r.LastName[len(r.LastName)-1] != '.' {
+		errs[lastName] = "last name must contain only 1 letter"
+	}
+
+	if r.Position == "" {
+		errs[position] = "position is empty"
+	}
+
+	if len(r.Skills) == 0 {
+		errs[skills] = "skills are empty"
+	}
+
+	if len(r.Projects) == 0 {
+		errs[projects] = "projects are empty"
+	}
+
+	if r.Education == "" {
+		errs[education] = "education is empty"
+	}
+
+	if r.LanguageSkills == "" {
+		errs[languageSkills] = "language skills are empty"
+	}
+
+	return errs
+}
+
+func (r *Resume) validateExperience(errs map[string]string) map[string]string {
+	errs = r.validateExperienceYears(errs)
+
+	if len(r.Experience.Technologies) == 0 {
+		errs[experienceTech] = "technologies are empty"
+	}
+
+	if len(r.Experience.Databases) == 0 {
+		errs[experienceDB] = "databases are empty"
+	}
+
+	if len(r.Experience.DevOps) == 0 {
+		errs[experienceDev] = "dev ops are empty"
+	}
+
+	if len(r.Experience.CollaborationTools) == 0 {
+		errs[experienceColl] = "collaboration tools are empty"
+	}
+
+	if len(r.Experience.VersionControls) == 0 {
+		errs[experienceVC] = "version control are empty"
+	}
+
+	return errs
+}
+
+func (r *Resume) validateExperienceYears(errs map[string]string) map[string]string {
+	var minDate *mydate.Date
+
+	for _, wh := range r.WorkHistory {
+		if minDate == nil || wh.Start.Less(*minDate) {
+			minDate = &wh.Start
+		}
+	}
+
+	if minDate == nil {
+		return errs
+	}
+
+	current := mydate.Current()
+	totalMonths := current.Since(*minDate)
+
+	if (totalMonths-1)/12+1 < r.Experience.Years || r.Experience.Years < (totalMonths)/12 {
+		errs[experience] = "experience years do not match work history"
+	}
+
+	return errs
+}
+
+func (r *Resume) validateWorkHistory(errs map[string]string) map[string]string {
+	if len(r.WorkHistory) == 0 {
+		errs[workHistory] = "work history is empty"
+		return errs
+	}
+
+	for i, wh := range r.WorkHistory {
+		if wh.Start.Current() {
+			errs[fmt.Sprintf("%s.%d", workHistoryPeriod, i+1)] = "start date cannot be current"
+		}
+
+		if wh.End.Less(wh.Start) {
+			errs[fmt.Sprintf("%s.%d", workHistoryPeriod, i+1)] = "end date is before start date"
+		}
+
+		if wh.Role == "" {
+			errs[fmt.Sprintf("%s.%d", workHistoryRole, i+1)] = "role is empty"
+		}
+
+		if wh.Project == "" {
+			errs[fmt.Sprintf("%s.%d", workHistoryProj, i+1)] = "project is empty"
+		}
+
+		if len(wh.Responsibilities) == 0 {
+			errs[fmt.Sprintf("%s.%d", workHistoryResp, i+1)] = "responsibilities are empty"
+		}
+
+		if len(wh.Technologies) == 0 {
+			errs[fmt.Sprintf("%s.%d", workHistoryTech, i+1)] = "technologies are empty"
+		}
+	}
+
+	return errs
 }
