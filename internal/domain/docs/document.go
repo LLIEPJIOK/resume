@@ -102,10 +102,7 @@ func extractTable(table *docs.Table) *ParsedTable {
 				}
 			}
 
-			cellText = strings.TrimSpace(cellText)
-			if cellText != "" {
-				cells = append(cells, cellText)
-			}
+			cells = append(cells, strings.TrimSpace(cellText))
 		}
 
 		result.Rows = append(result.Rows, cells)

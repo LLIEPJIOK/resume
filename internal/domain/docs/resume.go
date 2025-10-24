@@ -239,6 +239,10 @@ func (r *Resume) validateWorkHistory(errs map[string]string) map[string]string {
 			errs[fmt.Sprintf("%s.%d", workHistoryPeriod, i+1)] = "end date is before start date"
 		}
 
+		if i+1 != len(r.WorkHistory) && wh.Start.Less(r.WorkHistory[i+1].End) {
+			errs[fmt.Sprintf("%s.%d", workHistoryPeriod, i+1)] = "start date overlaps with previous work history end date"
+		}
+
 		if wh.Role == "" {
 			errs[fmt.Sprintf("%s.%d", workHistoryRole, i+1)] = "role is empty"
 		}
