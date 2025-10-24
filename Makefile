@@ -5,4 +5,4 @@ endif
 
 .PHONY: run
 run:
-	@go run cmd/resume/main.go
+	@go run cmd/cli/main.go
