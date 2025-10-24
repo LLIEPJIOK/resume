@@ -2,13 +2,14 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
 
 	"github.com/LLIEPJIOK/resume/internal/config"
-	"github.com/LLIEPJIOK/resume/internal/infra/docs/document"
-	"github.com/LLIEPJIOK/resume/internal/infra/docs/service"
+	"github.com/LLIEPJIOK/resume/internal/domain/docs"
+	docsService "github.com/LLIEPJIOK/resume/internal/infra/service/docs"
 )
 
 const (
@@ -27,17 +28,34 @@ func main() {
 		os.Exit(CodeErrorConfig)
 	}
 
-	svc, err := service.New(ctx, &cfg.Credentials)
+	svc, err := docsService.New(ctx, &cfg.Credentials)
 	if err != nil {
 		slog.Error("failed to create docs service", slog.Any("error", err))
 		os.Exit(CodeErrorDocsService)
 	}
 
-	doc, err := document.New(svc, "1ibwc7w2-Dkt2PVBXXzIAXkM0m3zeBNQAEPBuAOWF1Qc")
+	doc, err := docs.New(svc, "1lvYb-rtVvKA__maOFTRC_ogIFLB80Jx1KTWDPauhpFE")
 	if err != nil {
 		slog.Error("failed to get document", slog.Any("error", err))
 		os.Exit(CodeErrorGetDocument)
 	}
 
 	fmt.Println(doc.Title())
+
+	r, err := doc.ToResume()
+	if err != nil {
+		slog.Error("failed to convert document to resume", slog.Any("error", err))
+		os.Exit(1)
+	}
+
+	data, err := json.Marshal(r)
+	if err != nil {
+		slog.Error("failed to marshal resume to json", slog.Any("error", err))
+		os.Exit(1)
+	}
+
+	if err := os.WriteFile("resume.json", data, 0600); err != nil {
+		slog.Error("failed to write resume to file", slog.Any("error", err))
+		os.Exit(1)
+	}
 }
